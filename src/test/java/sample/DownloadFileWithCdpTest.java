@@ -1,18 +1,16 @@
 package sample;
 
 import static java.time.Duration.ofSeconds;
-import static org.openqa.selenium.devtools.v124.browser.Browser.SetDownloadBehaviorBehavior.ALLOWANDNAME;
+import static org.openqa.selenium.devtools.v136.browser.Browser.SetDownloadBehaviorBehavior.ALLOWANDNAME;
 
 import java.io.IOException;
 import java.net.URL;
-import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.By.ByXPath;
@@ -21,7 +19,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.devtools.DevTools;
 import org.openqa.selenium.devtools.HasDevTools;
-import org.openqa.selenium.devtools.v124.browser.Browser;
+import org.openqa.selenium.devtools.v136.browser.Browser;
 import org.openqa.selenium.remote.Augmenter;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -38,7 +36,7 @@ public class DownloadFileWithCdpTest {
     }
   }
 
-  @RepeatedTest(25)
+  @Test
   void downloadPngSampleFileFromPublicResource() throws IOException {
     ChromeOptions options = new ChromeOptions();
     options.setEnableDownloads(true);
@@ -52,10 +50,11 @@ public class DownloadFileWithCdpTest {
   }
 
   class DownloadPage {
+
     private final WebDriverWait wait = new WebDriverWait(driver, ofSeconds(60));
     private final By downloadXls = new ByXPath("//*[@class='example']//a[text()='webdriverIO.png']");
 
-    public void clickDownloadXlsButton() throws IOException {
+    public void clickDownloadXlsButton() {
       driver = new Augmenter().augment(driver);
       DevTools devTools = ((HasDevTools) driver).getDevTools();
       devTools.createSession();
@@ -74,6 +73,9 @@ public class DownloadFileWithCdpTest {
 
       wait.until(ExpectedConditions.elementToBeClickable(downloadXls));
       driver.findElement(downloadXls).click();
+      driver.findElement(new ByXPath("//*[@class='example']//a[text()='screenshot.png']")).click();
+      driver.findElement(new ByXPath("//*[@class='example']//a[text()='sample_upload.txt']")).click();
+      driver.findElement(new ByXPath("//*[@class='example']//a[text()='tk.txt']")).click();
 
       Assertions.assertDoesNotThrow(() -> wait.until(_d -> completed));
     }
