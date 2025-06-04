@@ -16,6 +16,9 @@ dependencies {
     implementation("io.github.bonigarcia:webdrivermanager:6.1.0")
     //implementation("org.seleniumhq.selenium:selenium-java:4.32.0")
     implementation("com.codeborne:selenide-appium:7.9.2")
+
+    // Needed on Mac ARM (because the latest "seleniarm" version is 124)
+    implementation("org.seleniumhq.selenium:selenium-devtools-v124:4.22.0")
 }
 
 tasks.test {
