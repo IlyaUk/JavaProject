@@ -1,19 +1,21 @@
 package sample;
 
 import static java.time.Duration.ofSeconds;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.openqa.selenium.devtools.v136.browser.Browser.SetDownloadBehaviorBehavior.ALLOWANDNAME;
+import static org.openqa.selenium.devtools.v136.browser.model.DownloadProgress.State.COMPLETED;
+import static org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable;
 
-import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
-import org.openqa.selenium.By.ByXPath;
 import org.openqa.selenium.HasDownloads;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -22,12 +24,26 @@ import org.openqa.selenium.devtools.HasDevTools;
 import org.openqa.selenium.devtools.v136.browser.Browser;
 import org.openqa.selenium.remote.Augmenter;
 import org.openqa.selenium.remote.RemoteWebDriver;
-import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DownloadFileWithCdpTest {
+  private static final Logger log = LoggerFactory.getLogger(DownloadFileWithCdpTest.class);
 
   private WebDriver driver;
+  private String filename;
+
+  @BeforeEach
+  void setUp() throws MalformedURLException {
+    ChromeOptions options = new ChromeOptions();
+    options.setEnableDownloads(true);
+    options.enableBiDi();
+
+    driver = new RemoteWebDriver(new URL("http://localhost:4444/wd/hub"), options);
+    driver.manage().timeouts().implicitlyWait(ofSeconds(5));
+    driver.manage().window().maximize();
+  }
 
   @AfterEach
   void closeDriver() {
@@ -37,24 +53,21 @@ public class DownloadFileWithCdpTest {
   }
 
   @Test
-  void downloadPngSampleFileFromPublicResource() throws IOException {
-    ChromeOptions options = new ChromeOptions();
-    options.setEnableDownloads(true);
-    driver = new RemoteWebDriver(new URL("http://localhost:4444/wd/hub"), options);
-    driver.manage().timeouts().implicitlyWait(ofSeconds(60));
-    driver.manage().window().maximize();
-    driver.get("https://the-internet.herokuapp.com/download");
-    new DownloadPage().clickDownloadXlsButton();
+  void downloadSampleFile() {
+    driver.get("https://selenide.org/test-page/download.html");
+
+    new DownloadPage().clickDownloadButton();
     List<String> files = ((HasDownloads) driver).getDownloadableFiles();
-    Assertions.assertFalse(files.isEmpty(), "No files were downloaded");
+    assertThat(files).as("No files were downloaded").isNotEmpty();
   }
 
   class DownloadPage {
 
-    private final WebDriverWait wait = new WebDriverWait(driver, ofSeconds(60));
-    private final By downloadXls = new ByXPath("//*[@class='example']//a[text()='webdriverIO.png']");
+    private final WebDriverWait wait = new WebDriverWait(driver, ofSeconds(5));
+    private final By downloadLink1 = By.linkText("hello-world.txt");
+    private final By downloadLink2 = By.linkText("hello-world.pdf");
 
-    public void clickDownloadXlsButton() {
+    public void clickDownloadButton() {
       driver = new Augmenter().augment(driver);
       DevTools devTools = ((HasDevTools) driver).getDevTools();
       devTools.createSession();
@@ -68,16 +81,24 @@ public class DownloadFileWithCdpTest {
 
       AtomicBoolean completed = new AtomicBoolean(false);
       devTools.addListener(
+          Browser.downloadWillBegin(),
+          e -> {
+            filename = e.getSuggestedFilename();
+            log.info("Download will begin: {}", filename);
+          });
+      devTools.addListener(
           Browser.downloadProgress(),
-          e -> completed.set(Objects.equals(e.getState().toString(), "completed")));
+          e -> {
+            log.info("Download progress: {} {}/{} bytes", e.getState(), e.getReceivedBytes(), e.getTotalBytes());
+            completed.set(e.getState() == COMPLETED);
+          });
 
-      wait.until(ExpectedConditions.elementToBeClickable(downloadXls));
-      driver.findElement(downloadXls).click();
-      driver.findElement(new ByXPath("//*[@class='example']//a[text()='screenshot.png']")).click();
-      driver.findElement(new ByXPath("//*[@class='example']//a[text()='sample_upload.txt']")).click();
-      driver.findElement(new ByXPath("//*[@class='example']//a[text()='tk.txt']")).click();
+      wait.until(elementToBeClickable(downloadLink1));
+      driver.findElement(downloadLink1).click();
+      driver.findElement(downloadLink2).click();
 
-      Assertions.assertDoesNotThrow(() -> wait.until(_d -> completed));
+      wait.until(_d -> completed.get());
+      wait.until(_d -> !((HasDownloads) driver).getDownloadableFiles().isEmpty());
     }
   }
 }
