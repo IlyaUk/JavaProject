@@ -13,9 +13,8 @@ dependencies {
     implementation("org.junit.jupiter:junit-jupiter-api:5.11.0")
     implementation("org.junit.jupiter:junit-jupiter-engine:5.11.0")
     implementation("org.junit.jupiter:junit-jupiter-params:5.11.0")
-    implementation("io.github.bonigarcia:webdrivermanager:6.1.0")
-    //implementation("org.seleniumhq.selenium:selenium-java:4.32.0")
-    implementation("com.codeborne:selenide-appium:7.9.2")
+     implementation("com.codeborne:selenide-grid:7.9.3")
+    implementation("com.codeborne:selenide-appium:7.9.3")
 
     // Needed on Mac ARM (because the latest "seleniarm" version is 124)
     implementation("org.seleniumhq.selenium:selenium-devtools-v124:4.22.0")
