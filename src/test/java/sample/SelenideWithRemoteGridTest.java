@@ -1,48 +1,36 @@
 package sample;
 
+import static com.codeborne.selenide.DownloadOptions.file;
+import static com.codeborne.selenide.FileDownloadMode.CDP;
+import static com.codeborne.selenide.Selectors.byText;
 import static com.codeborne.selenide.Selenide.$;
+import static com.codeborne.selenide.Selenide.open;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import com.codeborne.selenide.Selenide;
-import com.codeborne.selenide.WebDriverRunner;
-import java.io.IOException;
-import java.net.URL;
-import org.junit.jupiter.api.AfterEach;
+import java.io.File;
+
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.remote.RemoteWebDriver;
+
+import com.codeborne.selenide.Configuration;
 
 public class SelenideWithRemoteGridTest {
-
-  private WebDriver driver;
-
-  @AfterEach
-  void closeDriver() {
-    if (driver != null) {
-      driver.quit();
-    }
-  }
-
   @Test
-  void downloadPngSampleFileFromPublicResource() throws IOException {
-    ChromeOptions options = new ChromeOptions();
-    options.setEnableDownloads(true);
-    driver = new RemoteWebDriver(new URL("http://localhost:4444/wd/hub"), options);
-    WebDriverRunner.setWebDriver(driver);
-    Selenide.open("https://the-internet.herokuapp.com/download");
-    new DownloadPage().clickDownloadXlsButton();
+  void downloadSampleFile() {
+    Configuration.remote = "http://localhost:4444/wd/hub";
+    Configuration.browserCapabilities = new ChromeOptions()
+      .setEnableDownloads(true)
+      .enableBiDi();
+
+    open("https://selenide.org/test-page/download.html");
+    File file = new DownloadPage().downloadFile("hello-world.txt");
+    assertThat(file).hasName("hello-world.txt");
+    assertThat(file).hasContent("Hello, world!");
   }
 
   static class DownloadPage {
-
-    public void clickDownloadXlsButton() {
-      $(By.xpath("//*[@class='example']//a[text()='screenshot.png']")).click();
-      $(By.xpath("//*[@class='example']//a[text()='sample_upload.txt']")).click();
-      $(By.xpath("//*[@class='example']//a[text()='tk.txt']")).click();
-      $(By.xpath("//*[@class='example']//a[text()='screenshot.png']")).click();
-      $(By.xpath("//*[@class='example']//a[text()='sample_upload.txt']")).click();
-      $(By.xpath("//*[@class='example']//a[text()='tk.txt']")).click();
+    public File downloadFile(String fileName) {
+      return $(byText(fileName)).download(file().withMethod(CDP).withExtension("txt"));
     }
   }
 }
